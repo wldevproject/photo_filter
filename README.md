@@ -105,11 +105,10 @@ cd python_app
 CI/CD otomatis (GitHub Actions):
 
 - Workflow: `.github/workflows/python-app-ci-cd.yml`
-- Push tag `vX.Y.Z` akan publish 4 file ke GitHub Release:
-  - `photo_sorter_<version>_electron_installer.exe`
-  - `photo_sorter_<version>_electron_portable.exe`
-  - `photo_sorter_<version>_python.exe`
-  - `photo_sorter_<version>_python.msi`
+- Fokus build Python saja (`.exe` + `.msi`).
+- Push tag `vX.Y.Z` akan publish 2 file ke GitHub Release:
+  - `photo_sorter_<version>.exe`
+  - `photo_sorter_<version>.msi`
 
 Dokumentasi detail per versi:
 

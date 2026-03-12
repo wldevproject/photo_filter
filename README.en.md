@@ -113,11 +113,10 @@ cd python_app
 Automated CI/CD (GitHub Actions):
 
 - Workflow: `.github/workflows/python-app-ci-cd.yml`
-- Pushing tag `vX.Y.Z` publishes 4 files to GitHub Release:
-  - `photo_sorter_<version>_electron_installer.exe`
-  - `photo_sorter_<version>_electron_portable.exe`
-  - `photo_sorter_<version>_python.exe`
-  - `photo_sorter_<version>_python.msi`
+- Python build only (`.exe` + `.msi`).
+- Pushing tag `vX.Y.Z` publishes 2 files to GitHub Release:
+  - `photo_sorter_<version>.exe`
+  - `photo_sorter_<version>.msi`
 
 Per-version docs:
 

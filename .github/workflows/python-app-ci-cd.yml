@@ -8,14 +8,12 @@ on:
       - "v*"
     paths:
       - "python_app/**"
-      - "electron_app/**"
       - ".github/workflows/python-app-ci-cd.yml"
   pull_request:
     branches:
       - main
     paths:
       - "python_app/**"
-      - "electron_app/**"
       - ".github/workflows/python-app-ci-cd.yml"
   workflow_dispatch:
     inputs:
@@ -32,21 +30,11 @@ env:
 
 jobs:
   build-windows:
-    name: Build Windows Artifacts (Python + Electron)
+    name: Build Python EXE + MSI (Windows)
     runs-on: windows-latest
-    outputs:
-      product_version: ${{ steps.meta.outputs.product_version }}
-      artifact_name: ${{ steps.bundle.outputs.artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: electron_app/package-lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -97,100 +85,47 @@ jobs:
         run: |
           .\scripts\build_all.ps1 -ProductVersion "${{ steps.meta.outputs.product_version }}"
 
-      - name: Package Python outputs
-        shell: pwsh
-        working-directory: python_app
-        run: |
-          $version = "${{ steps.meta.outputs.product_version }}"
-          .\scripts\package_release.ps1 -ProductVersion $version
-
-      - name: Install Electron dependencies
-        shell: pwsh
-        working-directory: electron_app
-        run: |
-          npm ci
-
-      - name: Build Electron installer + portable
-        shell: pwsh
-        working-directory: electron_app
-        run: |
-          $version = "${{ steps.meta.outputs.product_version }}"
-          npm run dist:win -- --config.extraMetadata.version=$version
-
-      - name: Bundle release files
-        id: bundle
+      - name: Prepare release files
+        id: release_files
         shell: pwsh
         run: |
           $version = "${{ steps.meta.outputs.product_version }}"
-          $bundleDir = Join-Path $env:GITHUB_WORKSPACE "release_bundle"
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release_bundle"
 
-          if (Test-Path $bundleDir) {
-            Remove-Item -Path $bundleDir -Recurse -Force
+          if (Test-Path $releaseDir) {
+            Remove-Item -Path $releaseDir -Recurse -Force
           }
-          New-Item -ItemType Directory -Path $bundleDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
 
-          $pythonExeSource = Join-Path $env:GITHUB_WORKSPACE "python_app\release\photo_sorter.exe"
-          $pythonMsiSource = Join-Path $env:GITHUB_WORKSPACE "python_app\release\photo_sorter.msi"
+          $exeSource = Join-Path $env:GITHUB_WORKSPACE "python_app\dist\photo_sorter.exe"
+          $msiSource = Join-Path $env:GITHUB_WORKSPACE "python_app\dist\photo_sorter.msi"
 
-          if (-not (Test-Path $pythonExeSource)) { throw "Python EXE tidak ditemukan: $pythonExeSource" }
-          if (-not (Test-Path $pythonMsiSource)) { throw "Python MSI tidak ditemukan: $pythonMsiSource" }
+          if (-not (Test-Path $exeSource)) { throw "Python EXE tidak ditemukan: $exeSource" }
+          if (-not (Test-Path $msiSource)) { throw "Python MSI tidak ditemukan: $msiSource" }
 
-          Copy-Item $pythonExeSource (Join-Path $bundleDir "photo_sorter_${version}_python.exe")
-          Copy-Item $pythonMsiSource (Join-Path $bundleDir "photo_sorter_${version}_python.msi")
+          $exeTarget = Join-Path $releaseDir "photo_sorter_${version}.exe"
+          $msiTarget = Join-Path $releaseDir "photo_sorter_${version}.msi"
 
-          $electronReleaseDir = Join-Path $env:GITHUB_WORKSPACE "electron_app\release"
-          $electronExeFiles = Get-ChildItem -Path $electronReleaseDir -File -Filter *.exe
+          Copy-Item $exeSource $exeTarget -Force
+          Copy-Item $msiSource $msiTarget -Force
 
-          if (-not $electronExeFiles) {
-            throw "Output Electron .exe tidak ditemukan di: $electronReleaseDir"
-          }
+          "exe_path=$exeTarget" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "msi_path=$msiTarget" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-          $installer = $electronExeFiles | Where-Object { $_.Name -match "setup" } | Select-Object -First 1
-          if (-not $installer) {
-            throw "Installer Electron (Setup .exe) tidak ditemukan."
-          }
-
-          $portable = $electronExeFiles | Where-Object { $_.FullName -ne $installer.FullName } | Select-Object -First 1
-          if (-not $portable) {
-            throw "Portable Electron (.exe) tidak ditemukan."
-          }
-
-          Copy-Item $installer.FullName (Join-Path $bundleDir "photo_sorter_${version}_electron_installer.exe")
-          Copy-Item $portable.FullName (Join-Path $bundleDir "photo_sorter_${version}_electron_portable.exe")
-
-          $artifactName = "photo-sorter-$version-windows"
-          "artifact_name=$artifactName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-      - name: Upload bundled artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.bundle.outputs.artifact_name }}
-          path: release_bundle/*
-          if-no-files-found: error
-
-  release:
-    name: Publish GitHub Release
-    runs-on: ubuntu-latest
-    needs: build-windows
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.build-windows.outputs.artifact_name }}
-          path: release
-
-      - name: Create or update release
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.ref_name }}
-          VERSION: ${{ needs.build-windows.outputs.product_version }}
         run: |
-          set -euo pipefail
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" release/* --clobber
-          else
-            gh release create "$TAG_NAME" release/* --title "Photo Sorter $VERSION" --generate-notes
-          fi
+          $tagName = "${{ github.ref_name }}"
+          $version = "${{ steps.meta.outputs.product_version }}"
+          $exePath = "${{ steps.release_files.outputs.exe_path }}"
+          $msiPath = "${{ steps.release_files.outputs.msi_path }}"
+
+          gh release view $tagName --json name > $null 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tagName $exePath $msiPath --clobber
+          } else {
+            gh release create $tagName $exePath $msiPath --title "Photo Sorter $version" --generate-notes
+          }
