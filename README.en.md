@@ -25,6 +25,24 @@ Photo Sorter is built to speed up high-volume photo culling, especially after ph
 - Light/dark theme (Electron version).
 - Desktop installer builds.
 
+## Demo Screenshots
+
+### Initial view (Light Mode)
+
+![Screenshot 1](demo/Screenshot_1.png)
+
+### Initial view (Dark Mode)
+
+![Screenshot 2](demo/Screenshot_2.png)
+
+### Photo sorting process
+
+![Screenshot 3](demo/Screenshot_3.png)
+
+### Folder picker dialog
+
+![Screenshot 4](demo/Screenshot_4.png)
+
 ## How To Use (User Flow)
 
 1. Open the app.
