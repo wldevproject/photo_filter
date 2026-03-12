@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo Sorter</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="card header-card">
+        <div class="header-top">
+          <div class="brand-block">
+            <p class="brand-kicker">Photo Workflow</p>
+            <h1>Photo Sorter</h1>
+          </div>
+          <div class="header-actions">
+            <button id="open-folder-btn" class="btn btn-primary">Open Folder</button>
+            <button id="theme-btn" class="btn btn-ghost">Dark Mode</button>
+          </div>
+        </div>
+        <p class="header-subtitle">Desktop culling cepat untuk file JPG, PNG, DNG, NEF, dan format RAW lain.</p>
+        <p id="folder-label" class="folder-label">Folder aktif: belum dipilih</p>
+        <div class="progress-row">
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <span id="progress-label" class="progress-label">0/0 selesai</span>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <aside class="card sidebar-card">
+          <section class="segment">
+            <h2>Klasifikasi Cepat</h2>
+            <p id="remaining-chip" class="chip">Tersisa 0 foto</p>
+            <div class="category-stack">
+              <button class="btn btn-category bagus" data-category="Bagus">
+                <span class="category-title">Bagus</span>
+                <span class="category-meta"><span class="hotkey">1</span><span id="count-bagus" class="count">0</span></span>
+              </button>
+              <button class="btn btn-category lumayan" data-category="Lumayan">
+                <span class="category-title">Lumayan</span>
+                <span class="category-meta"><span class="hotkey">2</span><span id="count-lumayan" class="count">0</span></span>
+              </button>
+              <button class="btn btn-category jelek" data-category="Jelek">
+                <span class="category-title">Jelek</span>
+                <span class="category-meta"><span class="hotkey">3</span><span id="count-jelek" class="count">0</span></span>
+              </button>
+            </div>
+          </section>
+
+          <section class="segment">
+            <h3>Navigasi & Aksi</h3>
+            <div class="action-stack">
+              <button id="skip-btn" class="btn btn-action"><span>Skip</span><span class="hotkey">0 / →</span></button>
+              <button id="prev-btn" class="btn btn-action"><span>Previous</span><span class="hotkey">←</span></button>
+              <button id="undo-btn" class="btn btn-action"><span>Undo</span><span class="hotkey">U</span></button>
+              <button id="quit-btn" class="btn btn-action"><span>Keluar</span><span class="hotkey">Q</span></button>
+            </div>
+          </section>
+
+          <p class="tip">Tip: fokuskan jendela app, lalu gunakan keyboard untuk flow paling cepat.</p>
+        </aside>
+
+        <section class="card preview-card">
+          <div class="file-meta">
+            <h2 id="file-name">Belum ada folder dipilih</h2>
+            <p id="status-line">Klik Open Folder untuk mulai.</p>
+          </div>
+          <div id="preview-frame" class="preview-frame">
+            <img id="preview-image" alt="Preview" />
+            <div id="preview-placeholder" class="preview-placeholder">
+              Aplikasi siap. Klik Open Folder untuk pilih folder foto.
+            </div>
+          </div>
+          <p id="help-text" class="help-text">
+            Shortcut: 1 Bagus | 2 Lumayan | 3 Jelek | 0/→ Skip | ← Previous | U Undo | Q/Esc Keluar
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

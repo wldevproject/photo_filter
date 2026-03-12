@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <?define ProductName = "Photo Sorter" ?>
+  <?define Manufacturer = "photo_filter" ?>
+  <?define ProductVersion = "1.0.0" ?>
+  <?define UpgradeCode = "{8D60D057-E59C-4A75-BFD1-A3C3343A8D1D}" ?>
+
+  <Package
+    Name="$(var.ProductName)"
+    Manufacturer="$(var.Manufacturer)"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="$(var.UpgradeCode)"
+    Language="1033"
+    Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="Versi yang lebih baru sudah terpasang." />
+    <MediaTemplate EmbedCab="yes" />
+    <Icon Id="AppIcon" SourceFile="assets\app_icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Photo Sorter Python">
+        <Component Id="MainExecutableComponent" Guid="*">
+          <File Id="MainExecutableFile" Source="dist\photo_sorter.exe" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDir" Name="Photo Sorter Python">
+        <Component Id="ProgramMenuShortcutComponent" Guid="*">
+          <Shortcut
+            Id="ApplicationStartMenuShortcut"
+            Name="$(var.ProductName)"
+            Target="[INSTALLFOLDER]photo_sorter.exe"
+            WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="ProgramMenuDirCleanup" On="uninstall" />
+          <RegistryValue
+            Root="HKLM"
+            Key="Software\photo_filter\PhotoSorterPython"
+            Name="Installed"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="$(var.ProductName)" Level="1">
+      <ComponentRef Id="MainExecutableComponent" />
+      <ComponentRef Id="ProgramMenuShortcutComponent" />
+    </Feature>
+  </Package>
+</Wix>
