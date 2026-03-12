@@ -85,6 +85,19 @@ cd python_app
 .\scripts\build_all.ps1 -ProductVersion 1.0.0
 ```
 
+Build distribution archive (EXE + MSI + ZIP):
+
+```powershell
+cd python_app
+.\scripts\package_release.ps1 -ProductVersion 1.0.0 -BuildIfMissing
+```
+
+Automated CI/CD (GitHub Actions):
+
+- Workflow: `.github/workflows/python-app-ci-cd.yml`
+- CI artifact includes `photo_sorter.exe`, `photo_sorter.msi`, and release ZIP.
+- Pushing tag `vX.Y.Z` publishes EXE/MSI/ZIP assets to the matching GitHub Release.
+
 Per-version docs:
 
 - `electron_app/README.md`

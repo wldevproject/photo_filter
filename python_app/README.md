@@ -10,6 +10,7 @@ Ini versi Python lama dari Photo Sorter. Dipertahankan sebagai referensi/fallbac
 - `scripts/build_exe.ps1`: build EXE dengan PyInstaller.
 - `scripts/build_msi.ps1`: build MSI dari EXE.
 - `scripts/build_all.ps1`: build EXE lalu MSI.
+- `scripts/package_release.ps1`: copy EXE+MSI ke folder `release/` dan buat ZIP.
 - `requirements.txt`: dependency runtime app.
 - `requirements-build.txt`: dependency tool build.
 
@@ -99,6 +100,48 @@ Contoh build EXE otomatis jika belum ada:
 cd python_app
 .\scripts\build_all.ps1 -ProductVersion 1.0.1
 ```
+
+## Buat Archive Distribusi (EXE + MSI + ZIP)
+
+Setelah build selesai:
+
+```powershell
+cd python_app
+.\scripts\package_release.ps1 -ProductVersion 1.0.1
+```
+
+Output:
+
+- `release/photo_sorter.exe`
+- `release/photo_sorter.msi`
+- `release/photo_sorter_1.0.1_windows_x64.zip`
+
+Sekaligus build jika file `dist/` belum ada:
+
+```powershell
+.\scripts\package_release.ps1 -ProductVersion 1.0.1 -BuildIfMissing
+```
+
+## CI/CD (GitHub Actions)
+
+Workflow: `.github/workflows/python-app-ci-cd.yml`
+
+Trigger:
+
+- `push` ke `main` (untuk perubahan di `python_app/**`)
+- `pull_request` ke `main` (untuk perubahan di `python_app/**`)
+- `workflow_dispatch` (manual trigger + optional input version)
+- `push tag v*` (contoh: `v1.2.3`) untuk publish GitHub Release
+
+Hasil CI artifact:
+
+- `photo_sorter.exe`
+- `photo_sorter.msi`
+- `photo_sorter_<version>_windows_x64.zip`
+
+Hasil CD release:
+
+- Saat push tag `vX.Y.Z`, workflow akan upload EXE, MSI, dan ZIP ke GitHub Release tag tersebut.
 
 ## Troubleshooting
 

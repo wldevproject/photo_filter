@@ -1,0 +1,138 @@
+name: Python App CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "python_app/**"
+      - ".github/workflows/python-app-ci-cd.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "python_app/**"
+      - ".github/workflows/python-app-ci-cd.yml"
+  workflow_dispatch:
+    inputs:
+      product_version:
+        description: "Version untuk MSI/ZIP (format x.y.z). Kosongkan untuk auto."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build EXE + MSI (Windows)
+    runs-on: windows-latest
+    outputs:
+      product_version: ${{ steps.meta.outputs.product_version }}
+      artifact_name: ${{ steps.package.outputs.artifact_name }}
+      archive_name: ${{ steps.package.outputs.archive_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install WiX CLI
+        shell: pwsh
+        run: |
+          try {
+            dotnet tool update --global wix --version 6.*
+          } catch {
+            dotnet tool install --global wix --version 6.*
+          }
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          wix --version
+
+      - name: Resolve product version
+        id: meta
+        shell: pwsh
+        run: |
+          $manualVersion = "${{ inputs.product_version }}"
+
+          if ($manualVersion) {
+            $version = $manualVersion
+          } elseif ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $runNumber = [int]"${{ github.run_number }}"
+            $version = "1.0.$($runNumber % 65535)"
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version harus format x.y.z. Diterima: $version"
+          }
+
+          "product_version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Using ProductVersion: $version"
+
+      - name: Build EXE + MSI
+        shell: pwsh
+        working-directory: python_app
+        run: |
+          .\scripts\build_all.ps1 -ProductVersion "${{ steps.meta.outputs.product_version }}"
+
+      - name: Package release archive
+        id: package
+        shell: pwsh
+        working-directory: python_app
+        run: |
+          $version = "${{ steps.meta.outputs.product_version }}"
+          .\scripts\package_release.ps1 -ProductVersion $version
+
+          $artifactName = "photo-sorter-$version-windows"
+          $archiveName = "photo_sorter_${version}_windows_x64.zip"
+
+          "artifact_name=$artifactName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: |
+            python_app/release/photo_sorter.exe
+            python_app/release/photo_sorter.msi
+            python_app/release/${{ steps.package.outputs.archive_name }}
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-windows.outputs.artifact_name }}
+          path: release
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+          VERSION: ${{ needs.build-windows.outputs.product_version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" release/* --clobber
+          else
+            gh release create "$TAG_NAME" release/* --title "Photo Sorter $VERSION" --generate-notes
+          fi
