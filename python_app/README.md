@@ -128,20 +128,21 @@ Workflow: `.github/workflows/python-app-ci-cd.yml`
 
 Trigger:
 
-- `push` ke `main` (untuk perubahan di `python_app/**`)
-- `pull_request` ke `main` (untuk perubahan di `python_app/**`)
+- `push` ke `main` (untuk perubahan di `python_app/**` atau `electron_app/**`)
+- `pull_request` ke `main` (untuk perubahan di `python_app/**` atau `electron_app/**`)
 - `workflow_dispatch` (manual trigger + optional input version)
 - `push tag v*` (contoh: `v1.2.3`) untuk publish GitHub Release
 
 Hasil CI artifact:
 
-- `photo_sorter.exe`
-- `photo_sorter.msi`
-- `photo_sorter_<version>_windows_x64.zip`
+- `photo_sorter_<version>_electron_installer.exe`
+- `photo_sorter_<version>_electron_portable.exe`
+- `photo_sorter_<version>_python.exe`
+- `photo_sorter_<version>_python.msi`
 
 Hasil CD release:
 
-- Saat push tag `vX.Y.Z`, workflow akan upload EXE, MSI, dan ZIP ke GitHub Release tag tersebut.
+- Saat push tag `vX.Y.Z`, workflow akan upload 4 file di atas ke GitHub Release tag tersebut.
 
 ## Troubleshooting
 

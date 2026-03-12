@@ -8,17 +8,19 @@ on:
       - "v*"
     paths:
       - "python_app/**"
+      - "electron_app/**"
       - ".github/workflows/python-app-ci-cd.yml"
   pull_request:
     branches:
       - main
     paths:
       - "python_app/**"
+      - "electron_app/**"
       - ".github/workflows/python-app-ci-cd.yml"
   workflow_dispatch:
     inputs:
       product_version:
-        description: "Version untuk MSI/ZIP (format x.y.z). Kosongkan untuk auto."
+        description: "Versi release (format x.y.z). Kosongkan untuk auto."
         required: false
         type: string
 
@@ -27,15 +29,21 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build EXE + MSI (Windows)
+    name: Build Windows Artifacts (Python + Electron)
     runs-on: windows-latest
     outputs:
       product_version: ${{ steps.meta.outputs.product_version }}
-      artifact_name: ${{ steps.package.outputs.artifact_name }}
-      archive_name: ${{ steps.package.outputs.archive_name }}
+      artifact_name: ${{ steps.bundle.outputs.artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: electron_app/package-lock.json
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -86,28 +94,75 @@ jobs:
         run: |
           .\scripts\build_all.ps1 -ProductVersion "${{ steps.meta.outputs.product_version }}"
 
-      - name: Package release archive
-        id: package
+      - name: Package Python outputs
         shell: pwsh
         working-directory: python_app
         run: |
           $version = "${{ steps.meta.outputs.product_version }}"
           .\scripts\package_release.ps1 -ProductVersion $version
 
+      - name: Install Electron dependencies
+        shell: pwsh
+        working-directory: electron_app
+        run: |
+          npm ci
+
+      - name: Build Electron installer + portable
+        shell: pwsh
+        working-directory: electron_app
+        run: |
+          $version = "${{ steps.meta.outputs.product_version }}"
+          npm run dist:win -- --config.extraMetadata.version=$version
+
+      - name: Bundle release files
+        id: bundle
+        shell: pwsh
+        run: |
+          $version = "${{ steps.meta.outputs.product_version }}"
+          $bundleDir = Join-Path $env:GITHUB_WORKSPACE "release_bundle"
+
+          if (Test-Path $bundleDir) {
+            Remove-Item -Path $bundleDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $bundleDir -Force | Out-Null
+
+          $pythonExeSource = Join-Path $env:GITHUB_WORKSPACE "python_app\release\photo_sorter.exe"
+          $pythonMsiSource = Join-Path $env:GITHUB_WORKSPACE "python_app\release\photo_sorter.msi"
+
+          if (-not (Test-Path $pythonExeSource)) { throw "Python EXE tidak ditemukan: $pythonExeSource" }
+          if (-not (Test-Path $pythonMsiSource)) { throw "Python MSI tidak ditemukan: $pythonMsiSource" }
+
+          Copy-Item $pythonExeSource (Join-Path $bundleDir "photo_sorter_${version}_python.exe")
+          Copy-Item $pythonMsiSource (Join-Path $bundleDir "photo_sorter_${version}_python.msi")
+
+          $electronReleaseDir = Join-Path $env:GITHUB_WORKSPACE "electron_app\release"
+          $electronExeFiles = Get-ChildItem -Path $electronReleaseDir -File -Filter *.exe
+
+          if (-not $electronExeFiles) {
+            throw "Output Electron .exe tidak ditemukan di: $electronReleaseDir"
+          }
+
+          $installer = $electronExeFiles | Where-Object { $_.Name -match "setup" } | Select-Object -First 1
+          if (-not $installer) {
+            throw "Installer Electron (Setup .exe) tidak ditemukan."
+          }
+
+          $portable = $electronExeFiles | Where-Object { $_.FullName -ne $installer.FullName } | Select-Object -First 1
+          if (-not $portable) {
+            throw "Portable Electron (.exe) tidak ditemukan."
+          }
+
+          Copy-Item $installer.FullName (Join-Path $bundleDir "photo_sorter_${version}_electron_installer.exe")
+          Copy-Item $portable.FullName (Join-Path $bundleDir "photo_sorter_${version}_electron_portable.exe")
+
           $artifactName = "photo-sorter-$version-windows"
-          $archiveName = "photo_sorter_${version}_windows_x64.zip"
-
           "artifact_name=$artifactName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Upload build artifacts
+      - name: Upload bundled artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.package.outputs.artifact_name }}
-          path: |
-            python_app/release/photo_sorter.exe
-            python_app/release/photo_sorter.msi
-            python_app/release/${{ steps.package.outputs.archive_name }}
+          name: ${{ steps.bundle.outputs.artifact_name }}
+          path: release_bundle/*
           if-no-files-found: error
 
   release:

@@ -113,8 +113,11 @@ cd python_app
 Automated CI/CD (GitHub Actions):
 
 - Workflow: `.github/workflows/python-app-ci-cd.yml`
-- CI artifact includes `photo_sorter.exe`, `photo_sorter.msi`, and release ZIP.
-- Pushing tag `vX.Y.Z` publishes EXE/MSI/ZIP assets to the matching GitHub Release.
+- Pushing tag `vX.Y.Z` publishes 4 files to GitHub Release:
+  - `photo_sorter_<version>_electron_installer.exe`
+  - `photo_sorter_<version>_electron_portable.exe`
+  - `photo_sorter_<version>_python.exe`
+  - `photo_sorter_<version>_python.msi`
 
 Per-version docs:
 
