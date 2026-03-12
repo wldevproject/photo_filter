@@ -27,21 +27,13 @@ Photo Sorter dibuat untuk mempercepat proses culling foto dalam jumlah besar, te
 
 ## Screenshoot Demo
 
-### Tampilan awal (Light Mode)
+| Tampilan awal (Light Mode) | Tampilan awal (Dark Mode) |
+| --- | --- |
+| ![Screenshot 1](demo/Screenshot_1.png) | ![Screenshot 2](demo/Screenshot_2.png) |
 
-![Screenshot 1](demo/Screenshot_1.png)
-
-### Tampilan awal (Dark Mode)
-
-![Screenshot 2](demo/Screenshot_2.png)
-
-### Proses sortir foto
-
-![Screenshot 3](demo/Screenshot_3.png)
-
-### Dialog pilih folder
-
-![Screenshot 4](demo/Screenshot_4.png)
+| Proses sortir foto | Dialog pilih folder |
+| --- | --- |
+| ![Screenshot 3](demo/Screenshot_3.png) | ![Screenshot 4](demo/Screenshot_4.png) |
 
 ## Cara Penggunaan (User)
 
